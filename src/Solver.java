@@ -159,82 +159,118 @@ public class Solver {
 	static int mouseLocX = screenWidth / 2;
 	static int mouseLocY = screenHeight / 2;
 
-	static void moveMouse(int mouseX, int mouseY) throws Throwable {
-//		int distance = Math.max(Math.abs(mouseX - mouseLocX), Math.abs(mouseY - mouseLocY));
-//		int delay = distance / 4;
-//		int numSteps = delay / 5;
-//
-//		double stepx = (double)(mouseX - mouseLocX) / (double)numSteps;
-//		double stepy = (double)(mouseY - mouseLocY) / (double)numSteps;
-//
-//		for (int i = 0; i < numSteps; i++) {
-//			robot.mouseMove(mouseLocX + (int)(i*stepx), mouseLocY + (int)(i*stepy));
-//			Thread.sleep(5);
-//		}
+	static void moveMouse(int mouseX, int mouseY) {
 		robot.mouseMove(mouseX,mouseY);
 		mouseLocX = mouseX;
 		mouseLocY = mouseY;
 	}
 
-	static void clickOn(int i, int j) throws Throwable {
+	static void clickOn(int i, int j) {
 		i--;
 		j--;
 		int mouseX = BoardTopW + (int)(i * BoardPix);
 		int mouseY = BoardTopH + (int)(j * BoardPix);
-		moveMouse(mouseX,mouseY);
+		try {
+			moveMouse(mouseX,mouseY);
 
-		robot.mousePress(16);
-		Thread.sleep(5);
-		robot.mouseRelease(16);
-		Thread.sleep(10);
+			robot.mousePress(16);
+			Thread.sleep(5);
+			robot.mouseRelease(16);
+			Thread.sleep(10);
+		} catch (Throwable throwable) {
+			throwable.printStackTrace();
+		}
 	}
 
-	static void doubleClickOn(int i, int j) throws Throwable {
+	static void doubleClickOn(int i, int j) {
 		i--; //adjustment for the 'new' array design
 		j--;
 		int mouseX = BoardTopW + (int)(i * BoardPix);
 		int mouseY = BoardTopH + (int)(j * BoardPix);
-		moveMouse(mouseX,mouseY);
+		try {
+			moveMouse(mouseX,mouseY);
 
-		robot.mousePress(16);
-		Thread.sleep(5);
-		robot.mouseRelease(16);
-		Thread.sleep(5);
+			robot.mousePress(16);
+			Thread.sleep(5);
+			robot.mouseRelease(16);
+			Thread.sleep(5);
 
-		robot.mousePress(16);
-		Thread.sleep(5);
-		robot.mouseRelease(16);
-		Thread.sleep(5);
+			robot.mousePress(16);
+			Thread.sleep(5);
+			robot.mouseRelease(16);
+			Thread.sleep(5);
+		} catch (Throwable throwable) {
+			throwable.printStackTrace();
+		}
 	}
 
-	static void flagOn(int i, int j) throws Throwable {
+	static void flagOn(int i, int j) {
 		i--;
 		j--;
 		int mouseX = BoardTopW + (int)(i*BoardPix);
 		int mouseY = BoardTopH + (int)(j*BoardPix);
-		moveMouse(mouseX,mouseY);
+		try {
+			moveMouse(mouseX,mouseY);
 
-		robot.mousePress(4);
-		Thread.sleep(5);
-		robot.mouseRelease(4);
-		Thread.sleep(10);
+			robot.mousePress(4);
+			Thread.sleep(5);
+			robot.mouseRelease(4);
+			Thread.sleep(10);
+		} catch (Throwable throwable) {
+			throwable.printStackTrace();
+		}
+
+		numMines--;
 	}
 
 	//loops through simple checks as long as stuff still happens
-	static void simpleSolver() throws Throwable {
+	static void simpleSolver() { //todo: optimize me, a lot!
 		boolean updateValue = true;
 		while (updateValue) {
 			updateGameBoard();
-			logGameBoard();
+//			logGameBoard();
 			flagObviousBombs();
-			updateGameBoard();
-			logGameBoard();
 			update();
+			chordRun();
+//			logGameBoard();
 			updateValue = updateGameBoard();
+			System.out.println(numMines + " mines left.");
+			if (numMines == 0) {
+				for (int i = 1; i < BoardWidth; i++) {
+					for (int j = 1; j < BoardHeight; j++) {
+						if (gameBoard[i][j] == 0) {
+							clickOn(i,j);
+							System.exit(0);
+						}
+					}
+				}
+			}
+		}
+		randomGuesser();
+	}
+
+	//just guess
+	static void randomGuesser() { //todo: this needs a list of unchecked tiles to choose from, otherwise it takes way too long
+		int randX, randY;
+		while (true) {
+			randX = (int)(Math.random() * BoardWidth);
+			randY = (int)(Math.random() * BoardHeight);
+			if (gameBoard[randX][randY] == 0) {
+				clickOn(randX,randY);
+				return;
+			}
 		}
 	}
 
-	static void update() throws Throwable {
+	//returns true if the game has been lost
+	static boolean isLost() {
+		//todo: how can it be checked if the game has been lost? Optically checking for mines is just impractical?
+		//todo: Maybe checking each tile if a mine shows or if turned red Thread.sleep(10) after clicking it?
+		return false;
+	}
+
+	//runs through and does appropriate stuff for all flagged tiles
+	static void update() {
 		for (int i = 1; i <= BoardWidth; i++) {
 			for (int j = 1; j <= BoardHeight; j++) {
 				if (gameBoard[i][j] == -1) doubleClickOn(i,j);
@@ -261,19 +297,13 @@ public class Solver {
 	}
 
 	//flags last unchecked tiles next to found numbers
-	static void flagsObviousBombs() throws Throwable {
+	static void flagObviousBombs() {
+		int sum;
 		for (int i = 1; i <= BoardWidth; i++) {
 			for (int j = 1; j <= BoardHeight; j++) {
 				for (int k = 1; k < 9; k++) {
-					//if a tile has it's amount or less unknown tiles around it and besides that no other flags or tiles flagged for being flagged, flag it's unknown neighbors
-					if (gameBoard[i][j] == k && checkSurroundingTiles(0,i,j) <= k && checkSurroundingTiles(-2,i,j) == 0) {
-						if (k - checkSurroundingTiles(0,i,j) == 0) { //no problemo
-							flagNeighbors(i,j);
-							break;
-						}
-						if (k - checkSurroundingTiles(0,i,j) == 1) {
-							checkSurroundingTiles(10,i,j) == 0
-						}
+					sum = k;
+					if (gameBoard[i][j] == k && (checkSurroundingTiles(0,i,j) + checkSurroundingTiles(-2,i,j) + checkSurroundingTiles(10,i,j)) == sum) {
 						flagNeighbors(i,j);
 					}
 				}
@@ -281,16 +311,8 @@ public class Solver {
 		}
 	}
 
-	static void flagObviousBombs() throws Throwable {
-		for (int i = 1; i <= BoardWidth; i++) {
-			for (int j = 1; j <= BoardHeight; j++) {
-
-			}
-		}
-	}
-
 	//specified neighbors get flagged for clicking
-	static void clickNeighbors(int tileValue, int i, int j) throws Throwable {
+	static void clickNeighbors(int tileValue, int i, int j) {
 		if (gameBoard[i][j-1] == tileValue) gameBoard[i][j-1] = -3;
 		if (gameBoard[i+1][j-1] == tileValue) gameBoard[i+1][j-1] = -3;
 		if (gameBoard[i+1][j] == tileValue) gameBoard[i+1][j] = -3;
@@ -302,7 +324,7 @@ public class Solver {
 	}
 
 	//unchecked neighbors get flagged for flagging
-	static void flagNeighbors(int i, int j) throws Throwable {
+	static void flagNeighbors(int i, int j) {
 		if (gameBoard[i][j-1] == 0) gameBoard[i][j-1] = -2;
 		if (gameBoard[i+1][j-1] == 0) gameBoard[i+1][j-1] = -2;
 		if (gameBoard[i+1][j] == 0) gameBoard[i+1][j] = -2;
@@ -314,9 +336,9 @@ public class Solver {
 	}
 
 	//chord all possible tiles
-	static void chordRun() throws Throwable {
-		//if 1 mit 1 flag nachbarn
-		//if 2 mit 2 flag nachbarn -> for schleife?
+	static void chordRun() {
+		//if 1 with 1 flagged neighbor
+		//if 2 with 2 flagged neighbors -> for loop?
 		for (int i = 1; i <= BoardWidth; i++) {
 			for (int j = 1; j <= BoardHeight; j++) {
 				if (gameBoard[i][j] == 1  && checkSurroundingTiles(10, i, j) == 1) {
@@ -325,7 +347,8 @@ public class Solver {
 				} else if (gameBoard[i][j] == 2 && checkSurroundingTiles(10,i,j) == 2) {
 //					System.out.println("2: " + i + "x" + j);
 					doubleClickOn(i,j);
-				}
+				} //todo: all other checks
+				//todo: Doing this every time is incredibly tedious and ugly
 
 //				for (int k = 0; k < 8; k++) {
 //					if (gameBoard[i][j] == k && checkSurroundingTiles(10,i,j) == k) doubleClickOn(i,j);
@@ -337,8 +360,8 @@ public class Solver {
 
 	//iterates through all tiles and checks their color values to determine their meaning and updates the gameBoard array
 	//returns true if something changed
-	static int detectionThreshold = 20;
 	static boolean updateGameBoard() {
+		int detectionThreshold = 20;
 		boolean returnValue = false;
 		int rgb1,red1,green1,blue1,rgb2,red2,green2,blue2;
 		for (int i = 1; i <= BoardWidth; i++) {
@@ -482,8 +505,6 @@ public class Solver {
 	}
 
 	static BufferedImage getSingleTile(int i, int j) {
-//		return screenShotImage().getSubimage(BoardTopW + (int)(i * BoardPix)-((int)BoardPix/2),BoardTopH
-//				+ (int)(j * BoardPix)-((int)BoardPix/2),(int)BoardPix-((int)BoardPix/6),(int)BoardPix-((int)BoardPix/6));
 		//todo BoardPix/2 instead of 20
 		return screenShotImage().getSubimage((BoardTopW-22)+(int)(i*BoardPix),(BoardTopH-22)+(int)(j*BoardPix),(int)BoardPix,(int)BoardPix);
 	}
@@ -491,25 +512,10 @@ public class Solver {
 
 
 	public static void main(String[] args) throws Throwable {
-//		Thread.sleep(2000);
 		robot = new Robot();
 		calibrate();
-
 		clickOn(BoardHeight/2, BoardWidth/2);
-
-		updateGameBoard();
-//		logGameBoard();
-		flagObviousBombs();
-		update();
-//		updateGameBoard();
-//		logGameBoard();
-		chordRun();
-//		updateGameBoard();
-//		logGameBoard();
-
-//		flagObviousBombs();
-//		updateGameBoard();
-//		logGameBoard();
+		simpleSolver(); //todo: run in some kind of sensible loop
 
 	}
 
