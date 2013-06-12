@@ -2,6 +2,7 @@ import javax.imageio.ImageIO;
 import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.io.File;
+import java.util.LinkedList;
 
 /**
  * Solver.java
@@ -250,16 +251,20 @@ public class Solver {
 	}
 
 	//just guess
-	static void randomGuesser() { //todo: this needs a list of unchecked tiles to choose from, otherwise it takes way too long
-		int randX, randY;
-		while (true) {
-			randX = (int)(Math.random() * BoardWidth);
-			randY = (int)(Math.random() * BoardHeight);
-			if (gameBoard[randX][randY] == 0) {
-				clickOn(randX,randY);
-				return;
+	static void randomGuesser() {
+		LinkedList<Pair<Integer, Integer>> availableTiles = new LinkedList<Pair<Integer, Integer>>();
+
+		//fill a new LinkedList with all unchecked tiles, so as to choose a random one of these to click on
+		//todo: can guessing become 'smarter'?
+		for (int i = 1; i < BoardWidth; i++) {
+			for (int j = 1; j < BoardHeight; j++) {
+				if (gameBoard[i][j] == 0) availableTiles.add(new Pair<Integer, Integer>(i,j));
 			}
 		}
+
+		int rand;
+		rand = (int)(Math.random() * availableTiles.size());
+		clickOn(availableTiles.get(rand).getL(),availableTiles.get(rand).getR());
 	}
 
 	//returns true if the game has been lost
@@ -360,7 +365,7 @@ public class Solver {
 
 	//iterates through all tiles and checks their color values to determine their meaning and updates the gameBoard array
 	//returns true if something changed
-	static boolean updateGameBoard() {
+	static boolean updateGameBoard() { //todo: needs to run a lot faster! Maybe check where stuff can have changed since last clicks?
 		int detectionThreshold = 20;
 		boolean returnValue = false;
 		int rgb1,red1,green1,blue1,rgb2,red2,green2,blue2;
@@ -516,7 +521,25 @@ public class Solver {
 		calibrate();
 		clickOn(BoardHeight/2, BoardWidth/2);
 		simpleSolver(); //todo: run in some kind of sensible loop
+	}
 
+	//simple class for storing coordinates - for now only used in randomGuesser()
+	private static class Pair<L,R> {
+		private L l;
+		private R r;
+
+		public Pair(L l, R r) {
+			this.l = l;
+			this.r = r;
+		}
+
+		private L getL() {
+			return l;
+		}
+
+		private R getR() {
+			return r;
+		}
 	}
 
 }
