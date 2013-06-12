@@ -9,7 +9,7 @@ import java.awt.image.BufferedImage;
  *
  * Minesweeper Solver Tool based on http://luckytoilet.wordpress.com/2012/12/23/2125/
  * tested with and developed for (a slightly modified) Minesweeper.app
- * by Ross Frankling http://rossfranklin.blogspot.com on OS X 10.8
+ * by Ross Franklin http://rossfranklin.blogspot.com on OS X 10.8
  *
  * v0.2
  */
@@ -159,7 +159,7 @@ public class MSolver {
 	}
 
 	static void clickOn(int x, int y) {
-		int mouseX = board.boardTopW + (int)(x * board.boardPix):
+		int mouseX = board.boardTopW + (int)(x * board.boardPix);
 		int mouseY = board.boardTopH + (int)(y * board.boardPix);
 		try {
 			moveMouse(mouseX,mouseY);
@@ -173,7 +173,7 @@ public class MSolver {
 	}
 
 	static void doubleClickOn(int x, int y) {
-		int mouseX = board.boardTopW + (int)(x * board.boardPix):
+		int mouseX = board.boardTopW + (int)(x * board.boardPix);
 		int mouseY = board.boardTopH + (int)(y * board.boardPix);
 		try {
 			moveMouse(mouseX,mouseY);
@@ -191,7 +191,7 @@ public class MSolver {
 	}
 
 	static void flagOn(int x, int y) {
-		int mouseX = board.boardTopW + (int)(x * board.boardPix):
+		int mouseX = board.boardTopW + (int)(x * board.boardPix);
 		int mouseY = board.boardTopH + (int)(y * board.boardPix);
 		try {
 			moveMouse(mouseX,mouseY);
@@ -205,6 +205,11 @@ public class MSolver {
 
 		numMines--;
 	}
+
+
+	/**
+	 * Game Logic
+	 */
 
 
 
