@@ -13,6 +13,8 @@ import java.util.LinkedList;
  * Minesweeper Solver Tool based on http://luckytoilet.wordpress.com/2012/12/23/2125/
  * tested with and developed for (a slightly modified) Minesweeper.app
  * by Ross Frankling http://rossfranklin.blogspot.com on OS X 10.8
+ *
+ * v0.1
  */
 
 public class Solver {
@@ -33,6 +35,7 @@ public class Solver {
 	static Robot robot;
 
 
+	//takes a screenshot and returns BufferedImage
 	static BufferedImage screenShotImage() {
 		try {
 			Rectangle captureSize = new Rectangle(Toolkit.getDefaultToolkit().getScreenSize());
@@ -45,6 +48,7 @@ public class Solver {
 		return null;
 	}
 
+	//returns true if pixels are 'dark'
 	static boolean isDark(int rgb) {
 		int red = (rgb >> 16) & 0xFF;
 		int green = (rgb >> 8) & 0xFF;
@@ -52,11 +56,12 @@ public class Solver {
 		return red + blue + green < 400;	//100 for normal, 400 for 'Mine Swept'
 	}
 
+	//returns difference in color values between two different sets of rgb values
 	static int colorDifference(int r1, int g1, int b1, int r2, int g2, int b2) {
 		return Math.abs(r1 - r2) + Math.abs(g1 - g2) + Math.abs (b1 - b2);
 	}
 
-	//take screenshot, figure out board dimensions
+	//takes screenshot, figure out board dimensions
 	static void calibrate() {
 		System.out.println("Calibrating screen");
 
@@ -155,17 +160,20 @@ public class Solver {
 
 			System.exit(1);
 		}
+		updateGameBoard();
 	}
 
-	static int mouseLocX = screenWidth / 2;
-	static int mouseLocY = screenHeight / 2;
+//	static int mouseLocX = screenWidth / 2;
+//	static int mouseLocY = screenHeight / 2;
 
+	//moves the mouse to coordinates
 	static void moveMouse(int mouseX, int mouseY) {
 		robot.mouseMove(mouseX,mouseY);
-		mouseLocX = mouseX;
-		mouseLocY = mouseY;
+//		mouseLocX = mouseX;
+//		mouseLocY = mouseY;
 	}
 
+	//clicks on specified tile
 	static void clickOn(int i, int j) {
 		i--;
 		j--;
@@ -183,6 +191,7 @@ public class Solver {
 		}
 	}
 
+	//double clicks on specified tile
 	static void doubleClickOn(int i, int j) {
 		i--; //adjustment for the 'new' array design
 		j--;
@@ -205,6 +214,7 @@ public class Solver {
 		}
 	}
 
+	//flags specified tile
 	static void flagOn(int i, int j) {
 		i--;
 		j--;
@@ -226,53 +236,50 @@ public class Solver {
 
 	//loops through simple checks as long as stuff still happens
 	static void simpleSolver() { //todo: optimize me, a lot!
-		boolean updateValue = true;
-		while (updateValue) {
-			updateGameBoard();
-//			logGameBoard();
-			flagObviousBombs();
-			update();
-			chordRun();
-//			logGameBoard();
-			updateValue = updateGameBoard();
-			System.out.println(numMines + " mines left.");
-			if (numMines == 0) {
-				for (int i = 1; i < BoardWidth; i++) {
-					for (int j = 1; j < BoardHeight; j++) {
-						if (gameBoard[i][j] == 0) {
-							clickOn(i,j);
-							System.exit(0);
-						}
+		flagObviousBombs();
+		chordRun();
+		System.out.println(numMines + " mines left.");
+
+		if (numMines == 0) {
+			for (int i = 1; i < BoardWidth; i++) {
+				for (int j = 1; j < BoardHeight; j++) {
+					if (gameBoard[i][j] == 0) {
+						clickOn(i,j);
+						System.out.println("Done!");
+						System.exit(0);
 					}
 				}
 			}
 		}
-		randomGuesser();
 	}
 
-	//just guess
+	//makes a random guess and clicks unknown tile
 	static void randomGuesser() {
-		LinkedList<Pair<Integer, Integer>> availableTiles = new LinkedList<Pair<Integer, Integer>>();
+		LinkedList<Pair> availableTiles = new LinkedList<Pair>();
 
 		//fill a new LinkedList with all unchecked tiles, so as to choose a random one of these to click on
 		//todo: can guessing become 'smarter'?
 		for (int i = 1; i < BoardWidth; i++) {
 			for (int j = 1; j < BoardHeight; j++) {
-				if (gameBoard[i][j] == 0) availableTiles.add(new Pair<Integer, Integer>(i,j));
+				if (gameBoard[i][j] == 0) availableTiles.add(new Pair(i,j));
 			}
 		}
 
 		int rand;
 		rand = (int)(Math.random() * availableTiles.size());
-		clickOn(availableTiles.get(rand).getL(),availableTiles.get(rand).getR());
+		clickOn(availableTiles.get(rand).getX(),availableTiles.get(rand).getY());
 	}
 
 	//returns true if the game has been lost
-	static boolean isLost() {
-		//todo: how can it be checked if the game has been lost? Optically checking for mines is just impractical?
-		//todo: Maybe checking each tile if a mine shows or if turned red Thread.sleep(10) after clicking it?
-		return false;
-	}
+//	static void isLost(int i, int j) {
+//		//todo: how can it be checked if the game has been lost? Optically checking for mines is just impractical?
+//		//todo: Maybe checking each tile if a mine shows or if turned red Thread.sleep(10) after clicking it?
+//		BufferedImage tile = getSingleTile(i,j);
+//
+//
+//			System.out.println("Sorry, my bad.");
+//			System.exit(0);
+//	}
 
 	//runs through and does appropriate stuff for all flagged tiles
 	static void update() {
@@ -314,6 +321,8 @@ public class Solver {
 				}
 			}
 		}
+		update();
+		updateGameBoard();
 	}
 
 	//specified neighbors get flagged for clicking
@@ -340,27 +349,27 @@ public class Solver {
 		if (gameBoard[i-1][j-1] == 0) gameBoard[i-1][j-1] = -2;
 	}
 
-	//chord all possible tiles
+	//chord all possible tiles with the exception of those that have already been chorded in previous runs
+	static LinkedList<Pair> alreadyChorded = new LinkedList<Pair>();
 	static void chordRun() {
-		//if 1 with 1 flagged neighbor
-		//if 2 with 2 flagged neighbors -> for loop?
 		for (int i = 1; i <= BoardWidth; i++) {
+			nexttile:
 			for (int j = 1; j <= BoardHeight; j++) {
-				if (gameBoard[i][j] == 1  && checkSurroundingTiles(10, i, j) == 1) {
-//					System.out.println("1: " + i + "x" + j);
-					doubleClickOn(i,j);
-				} else if (gameBoard[i][j] == 2 && checkSurroundingTiles(10,i,j) == 2) {
-//					System.out.println("2: " + i + "x" + j);
-					doubleClickOn(i,j);
-				} //todo: all other checks
-				//todo: Doing this every time is incredibly tedious and ugly
+				for (Pair pair : alreadyChorded) { //don't chord tiles that have already been chorded before
+					if (pair.getX() == i && pair.getY() == j) {
+						continue nexttile;
+					}
+				}
 
-//				for (int k = 0; k < 8; k++) {
-//					if (gameBoard[i][j] == k && checkSurroundingTiles(10,i,j) == k) doubleClickOn(i,j);
-//				}
-
+				for (int k = 1; k < 8; k++) {
+					if (gameBoard[i][j] == k && checkSurroundingTiles(10,i,j) == k) {
+						doubleClickOn(i,j);
+						alreadyChorded.add(new Pair(i,j));
+					}
+				}
 			}
 		}
+		updateGameBoard();
 	}
 
 	//iterates through all tiles and checks their color values to determine their meaning and updates the gameBoard array
@@ -372,9 +381,10 @@ public class Solver {
 		for (int i = 1; i <= BoardWidth; i++) {
 			for (int j = 1; j <= BoardHeight; j++) {
 
-				if (gameBoard[i][j] > 0) continue;		//only check necessary tiles to speed everything up
+				if (gameBoard[i][j] > 0 && gameBoard[i][j] != 10) continue;		//only check necessary tiles to speed everything up
 
 				BufferedImage tile = getSingleTile(i-1,j-1);
+				//todo: speed up by not screenshotting for every tile, but once and then cropping?
 
 				//pixel from tile edge
 				rgb1 = tile.getRGB(5,5);
@@ -509,6 +519,7 @@ public class Solver {
 		imageCounter++;
 	}
 
+	//returns BufferedImage of a single tile given the coordinates
 	static BufferedImage getSingleTile(int i, int j) {
 		//todo BoardPix/2 instead of 20
 		return screenShotImage().getSubimage((BoardTopW-22)+(int)(i*BoardPix),(BoardTopH-22)+(int)(j*BoardPix),(int)BoardPix,(int)BoardPix);
@@ -520,25 +531,26 @@ public class Solver {
 		robot = new Robot();
 		calibrate();
 		clickOn(BoardHeight/2, BoardWidth/2);
-		simpleSolver(); //todo: run in some kind of sensible loop
+//		simpleSolver(); //todo: run in some kind of sensible loop
+		for (int i = 0; i < 5; i++) simpleSolver();
 	}
 
 	//simple class for storing coordinates - for now only used in randomGuesser()
-	private static class Pair<L,R> {
-		private L l;
-		private R r;
+	private static class Pair {
+		private int x;
+		private int y;
 
-		public Pair(L l, R r) {
-			this.l = l;
-			this.r = r;
+		private Pair(int x, int y) {
+			this.x = x;
+			this.y = y;
 		}
 
-		private L getL() {
-			return l;
+		private int getX() {
+			return x;
 		}
 
-		private R getR() {
-			return r;
+		private int getY() {
+			return y;
 		}
 	}
 
