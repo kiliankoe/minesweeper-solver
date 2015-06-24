@@ -211,12 +211,19 @@ public class MSolver {
 	 * Game Logic
 	 */
 
+	static void flagBombs() {
 
+	}
+
+	static void run() {
+		calibrate();
+		clickOn(board.boardHeight/2, board.boardWidth/2);
+	}
 
 
 
 	public static void main(String[] args) {
-
+		run();
 	}
 
 }

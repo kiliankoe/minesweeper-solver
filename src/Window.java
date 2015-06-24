@@ -25,20 +25,20 @@ public class Window extends JFrame {
 		startButton.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent actionEvent) {
-				//todo: Stuff
+				MSolver.run();
 			}
 		});
 		startButton.setToolTipText("click to start solving Minesweeper");
 
-		JButton cancelButton = new JButton("Cancel");
+		JButton cancelButton = new JButton("Exit");
 		cancelButton.setBounds(210,140,80,30);
 		cancelButton.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent actionEvent) {
-				//todo: Slightly less Stuff
+				System.exit(0);
 			}
 		});
-		cancelButton.setToolTipText("cancel the running algorithms");
+//		cancelButton.setToolTipText("");
 
 		panel.add(startButton);
 		panel.add(cancelButton);
